@@ -121,7 +121,14 @@
     await initMicrophone();
   });
 
-  // Config screen always shows — user clicks INITIALIZE when ready
+  // Check if launched in stealth mode (?stealth in URL)
+  var stealthMode = window.location.search.indexOf('stealth') !== -1;
+
+  if (stealthMode) {
+    // Skip config, start listening immediately
+    setupModal.style.display = 'none';
+    initMicrophone();
+  }
 
   // ---- Load saved config ----
   try {
