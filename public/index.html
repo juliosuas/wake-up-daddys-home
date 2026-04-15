@@ -3,69 +3,114 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JARVIS // ACTIVATION SYSTEM</title>
+  <title>JARVIS // ACTIVATION SYSTEM v2</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Matrix Rain Canvas -->
+
+  <!-- Setup Modal -->
+  <div class="setup-modal" id="setupModal">
+    <div class="setup-box">
+      <div class="setup-title">JARVIS CONFIGURATION</div>
+      <div class="setup-subtitle">Configure your activation parameters</div>
+
+      <label class="setup-label">DASHBOARD URL</label>
+      <input type="url" id="dashboardUrl" class="setup-input" placeholder="http://192.168.1.66:8080" value="http://192.168.1.66:8080">
+
+      <label class="setup-label">YOUTUBE SONG URL</label>
+      <input type="url" id="youtubeUrl" class="setup-input" placeholder="https://www.youtube.com/watch?v=..." value="https://www.youtube.com/watch?v=BN1WwnEDWAM">
+      <div class="setup-hint">Default: "Should I Stay or Should I Go" — The Clash</div>
+
+      <label class="setup-label">MIC SENSITIVITY</label>
+      <input type="range" id="sensitivity" class="setup-range" min="0.05" max="0.8" step="0.05" value="0.30">
+      <div class="setup-hint" id="sensitivityLabel">Threshold: 0.30</div>
+
+      <button class="setup-btn" id="startBtn">INITIALIZE JARVIS</button>
+    </div>
+  </div>
+
+  <!-- Matrix Rain -->
   <canvas id="matrix"></canvas>
 
-  <!-- Scan Lines Overlay -->
+  <!-- Scan Lines -->
   <div class="scanlines"></div>
 
-  <!-- HUD Container -->
-  <div class="hud-container" id="hud">
-    <!-- Rotating Circles -->
-    <div class="hud-circle circle-1"></div>
-    <div class="hud-circle circle-2"></div>
-    <div class="hud-circle circle-3"></div>
+  <!-- Vignette -->
+  <div class="vignette"></div>
 
-    <!-- Center Status -->
-    <div class="center-status" id="centerStatus">
-      <div class="mic-icon" id="micIcon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-          <line x1="12" y1="19" x2="12" y2="23"/>
-          <line x1="8" y1="23" x2="16" y2="23"/>
-        </svg>
+  <!-- HUD -->
+  <div class="hud" id="hud">
+    <div class="hud-ring ring-outer"></div>
+    <div class="hud-ring ring-mid"></div>
+    <div class="hud-ring ring-inner"></div>
+
+    <!-- Arc decorations -->
+    <svg class="hud-arcs" viewBox="0 0 500 500">
+      <circle cx="250" cy="250" r="230" fill="none" stroke="var(--cyan)" stroke-width="0.5" stroke-dasharray="20 10" opacity="0.3"/>
+      <circle cx="250" cy="250" r="180" fill="none" stroke="var(--cyan)" stroke-width="0.5" stroke-dasharray="5 15" opacity="0.2"/>
+      <!-- Tick marks -->
+      <g id="ticks" opacity="0.4"></g>
+    </svg>
+
+    <div class="hud-center">
+      <div class="mic-visualizer" id="micVis">
+        <canvas id="micCanvas" width="120" height="120"></canvas>
       </div>
-      <div class="status-text" id="statusText">SYSTEM STANDBY</div>
-      <div class="sub-status" id="subStatus">CLAP TO ACTIVATE</div>
+      <div class="hud-status" id="hudStatus">STANDBY</div>
+      <div class="hud-sub" id="hudSub">AWAITING ACTIVATION</div>
     </div>
 
-    <!-- Audio Level Bar -->
-    <div class="level-bar-container">
-      <div class="level-bar" id="levelBar"></div>
+    <!-- Level meter -->
+    <div class="level-meter">
+      <div class="level-fill" id="levelFill"></div>
+      <div class="level-threshold" id="levelThreshold"></div>
     </div>
   </div>
 
-  <!-- Terminal Output -->
-  <div class="terminal" id="terminal"></div>
-
-  <!-- Big Reveal Text -->
-  <div class="reveal-container" id="revealContainer">
-    <div class="reveal-text glitch" id="revealText" data-text="WAKE UP">WAKE UP</div>
-    <div class="reveal-sub" id="revealSub">DADDY'S HOME</div>
+  <!-- Terminal -->
+  <div class="terminal" id="terminal">
+    <div class="terminal-header">
+      <span class="terminal-dot red"></span>
+      <span class="terminal-dot yellow"></span>
+      <span class="terminal-dot green"></span>
+      <span class="terminal-title">JARVIS TERMINAL</span>
+    </div>
+    <div class="terminal-body" id="terminalBody"></div>
   </div>
 
-  <!-- Corner Data Panels -->
-  <div class="data-panel top-left" id="panelTL">
-    <div class="panel-header">SYS.MONITOR</div>
-    <div class="panel-data" id="sysData"></div>
+  <!-- Reveal -->
+  <div class="reveal" id="reveal">
+    <div class="reveal-line1 glitch" id="revealLine1" data-text="WAKE UP">WAKE UP</div>
+    <div class="reveal-line2" id="revealLine2">DADDY'S HOME</div>
   </div>
-  <div class="data-panel top-right" id="panelTR">
-    <div class="panel-header">NETWORK.SCAN</div>
-    <div class="panel-data" id="netData"></div>
+
+  <!-- Data Panels -->
+  <div class="panel panel-tl" id="panelTL">
+    <div class="panel-title">SYS.STATUS</div>
+    <div class="panel-content" id="panelTLData"></div>
   </div>
-  <div class="data-panel bottom-left" id="panelBL">
-    <div class="panel-header">AUDIO.ANALYSIS</div>
-    <div class="panel-data" id="audioData"></div>
+  <div class="panel panel-tr" id="panelTR">
+    <div class="panel-title">NET.SCAN</div>
+    <div class="panel-content" id="panelTRData"></div>
   </div>
-  <div class="data-panel bottom-right" id="panelBR">
-    <div class="panel-header">NEURAL.LINK</div>
-    <div class="panel-data" id="neuralData"></div>
+  <div class="panel panel-bl" id="panelBL">
+    <div class="panel-title">AUDIO.FEED</div>
+    <div class="panel-content" id="panelBLData"></div>
   </div>
+  <div class="panel panel-br" id="panelBR">
+    <div class="panel-title">AI.CORE</div>
+    <div class="panel-content" id="panelBRData"></div>
+  </div>
+
+  <!-- Corner brackets -->
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-tr"></div>
+  <div class="corner corner-bl"></div>
+  <div class="corner corner-br"></div>
+
+  <!-- Hidden YouTube player -->
+  <iframe id="ytPlayer" style="display:none" allow="autoplay"></iframe>
 
   <script src="app.js"></script>
 </body>
