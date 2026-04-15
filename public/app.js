@@ -15,6 +15,8 @@
     voiceId: 'onwK4e9ZLuTAKqWW03F9', // Daniel — British Broadcaster
     voiceLang: 'es',
     sensitivity: 0.15,
+    musicVolume: 40,
+    voiceVolume: 100,
   };
 
   var audioCtx, analyser, micStream, freqData, timeData;
@@ -64,7 +66,7 @@
       videoId: videoId,
       playerVars: { autoplay: 0, controls: 0, modestbranding: 1 },
       events: {
-        onReady: function () { ytReady = true; ytPlayerObj.setVolume(40); },
+        onReady: function () { ytReady = true; ytPlayerObj.setVolume(config.musicVolume); },
       },
     });
   };
@@ -92,6 +94,21 @@
     });
   });
 
+  // ---- Volume controls ----
+  var musicVolumeInput = $('musicVolume');
+  var musicVolLabel = $('musicVolLabel');
+  var voiceVolumeInput = $('voiceVolume');
+  var voiceVolLabel = $('voiceVolLabel');
+
+  musicVolumeInput.addEventListener('input', function () {
+    config.musicVolume = parseInt(musicVolumeInput.value);
+    musicVolLabel.textContent = config.musicVolume + '%';
+  });
+  voiceVolumeInput.addEventListener('input', function () {
+    config.voiceVolume = parseInt(voiceVolumeInput.value);
+    voiceVolLabel.textContent = config.voiceVolume + '%';
+  });
+
   // ---- Setup ----
   sensitivityInput.addEventListener('input', function () {
     config.sensitivity = parseFloat(sensitivityInput.value);
@@ -107,6 +124,8 @@
     config.voiceId = voiceSelect.value;
     config.voiceLang = voiceLangSelect.value;
     config.sensitivity = parseFloat(sensitivityInput.value);
+    config.musicVolume = parseInt(musicVolumeInput.value);
+    config.voiceVolume = parseInt(voiceVolumeInput.value);
 
     try { localStorage.setItem('jarvis_config', JSON.stringify(config)); } catch (e) {}
     document.title = config.agentName + ' // ACTIVATION SYSTEM';
@@ -149,6 +168,10 @@
       voiceLangSelect.value = config.voiceLang;
       sensitivityInput.value = config.sensitivity;
       sensitivityLabel.textContent = 'Threshold: ' + config.sensitivity.toFixed(2);
+      musicVolumeInput.value = config.musicVolume;
+      musicVolLabel.textContent = config.musicVolume + '%';
+      voiceVolumeInput.value = config.voiceVolume;
+      voiceVolLabel.textContent = config.voiceVolume + '%';
     }
   } catch (e) {}
 
@@ -320,7 +343,7 @@
     .then(function (blob) {
       var url = URL.createObjectURL(blob);
       voiceAudio = new Audio(url);
-      voiceAudio.volume = 1.0;
+      voiceAudio.volume = config.voiceVolume / 100;
 
       voiceAudio.onplay = function () {
         addLog('ok', config.agentName + ' hablando (ElevenLabs)');
@@ -400,8 +423,8 @@
     playYouTube();
 
     if (config.voiceEnabled) {
-      // Voice starts 400ms after music
-      setTimeout(function () { playElevenLabsVoice(config.voiceMessage); }, 400);
+      // Voice starts 100ms after clap — feels instant and natural
+      setTimeout(function () { playElevenLabsVoice(config.voiceMessage); }, 100);
     } else {
       voiceLabel.textContent = 'VOICE OFF';
       voiceBtnToggle.style.display = 'none';
@@ -419,9 +442,9 @@
     var attempts = 0;
     function tryPlay() {
       if (ytPlayerObj && ytReady) {
-        ytPlayerObj.setVolume(40);
+        ytPlayerObj.setVolume(config.musicVolume);
         ytPlayerObj.playVideo();
-        addLog('ok', 'YouTube (vol 40%)');
+        addLog('ok', 'YouTube (vol ' + config.musicVolume + '%)');
         return;
       }
       attempts++;
