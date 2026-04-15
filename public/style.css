@@ -260,6 +260,7 @@ body {
   z-index: 0;
   opacity: 0.12;
   transition: opacity 1.5s;
+  pointer-events: none;
 }
 body.active #matrix { opacity: 0.25; }
 
