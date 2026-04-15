@@ -14,7 +14,7 @@
     agentName: 'JARVIS',
     voiceId: 'onwK4e9ZLuTAKqWW03F9', // Daniel — British Broadcaster
     voiceLang: 'es',
-    sensitivity: 0.08,
+    sensitivity: 0.05,
   };
 
   var audioCtx, analyser, micStream, freqData, timeData;
@@ -141,13 +141,17 @@
   } catch (e) {}
 
   // ---- Matrix Rain ----
-  var MATRIX_CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ<>{}[]|/\\=+*^~';
+  var MATRIX_CHARS = '01アカサタナハマヤラワ<>{}|/=+*';
   var columns = [];
-  var FONT_SIZE = 14;
+  var FONT_SIZE = 20; // larger = fewer columns = faster on 4K
+  var matrixFrame = 0;
 
   function resizeMatrix() {
-    matrixCanvas.width = window.innerWidth;
-    matrixCanvas.height = window.innerHeight;
+    // Render at half resolution for performance on 4K
+    matrixCanvas.width = Math.floor(window.innerWidth / 2);
+    matrixCanvas.height = Math.floor(window.innerHeight / 2);
+    matrixCanvas.style.width = window.innerWidth + 'px';
+    matrixCanvas.style.height = window.innerHeight + 'px';
     var cols = Math.floor(matrixCanvas.width / FONT_SIZE);
     if (columns.length !== cols) {
       columns = [];
@@ -156,17 +160,19 @@
   }
 
   function drawMatrix() {
-    matrixCtx.fillStyle = 'rgba(10, 10, 15, 0.06)';
+    matrixFrame++;
+    // Skip every other frame for performance
+    if (matrixFrame % 2 === 0) { requestAnimationFrame(drawMatrix); return; }
+
+    matrixCtx.fillStyle = 'rgba(10, 10, 15, 0.08)';
     matrixCtx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
     matrixCtx.font = FONT_SIZE + 'px monospace';
+    var alpha = activated ? '0.7' : '0.2';
+    matrixCtx.fillStyle = 'rgba(0, 229, 255, ' + alpha + ')';
     for (var i = 0; i < columns.length; i++) {
       var ch = MATRIX_CHARS[Math.random() * MATRIX_CHARS.length | 0];
-      var x = i * FONT_SIZE, y = columns[i] * FONT_SIZE;
-      matrixCtx.fillStyle = activated
-        ? ('rgba(0, 229, 255, ' + (0.6 + Math.random() * 0.4) + ')')
-        : ('rgba(0, 229, 255, ' + (0.15 + Math.random() * 0.15) + ')');
-      matrixCtx.fillText(ch, x, y);
-      if (y > matrixCanvas.height && Math.random() > 0.975) columns[i] = 0;
+      matrixCtx.fillText(ch, i * FONT_SIZE, columns[i] * FONT_SIZE);
+      if (columns[i] * FONT_SIZE > matrixCanvas.height && Math.random() > 0.975) columns[i] = 0;
       else columns[i]++;
     }
     requestAnimationFrame(drawMatrix);
@@ -219,7 +225,7 @@
     levelFill.classList.toggle('hot', rms > config.sensitivity * 0.7);
     drawMicVis();
     var now = Date.now();
-    if (rms > config.sensitivity && spread > 0.1 && now - lastClapTime > COOLDOWN) {
+    if (rms > config.sensitivity && spread > 0.03 && now - lastClapTime > COOLDOWN) {
       lastClapTime = now;
       if (!activated) activate();
       else restoreWindows();
@@ -246,10 +252,6 @@
     }
     micCtx.closePath();
     micCtx.stroke();
-    micCtx.shadowBlur = 8;
-    micCtx.shadowColor = activated ? 'rgba(57,255,20,0.4)' : 'rgba(0,229,255,0.3)';
-    micCtx.stroke();
-    micCtx.shadowBlur = 0;
   }
 
   // ============================================================
