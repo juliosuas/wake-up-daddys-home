@@ -120,6 +120,20 @@
     await initMicrophone();
   });
 
+  // Auto-init: try to get mic immediately, show config only if it fails
+  (async function autoInit() {
+    try {
+      var testStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      testStream.getTracks().forEach(function(t) { t.stop(); });
+      // Mic available — skip config, go straight to listening
+      setupModal.classList.add('hidden');
+      setTimeout(function () { setupModal.style.display = 'none'; }, 300);
+      await initMicrophone();
+    } catch(e) {
+      // Mic not available yet — show config screen, user clicks Initialize
+    }
+  })();
+
   // ---- Load saved config ----
   try {
     var saved = JSON.parse(localStorage.getItem('jarvis_config'));
@@ -145,12 +159,10 @@
   var columns = [];
   var FONT_SIZE = 24;
   var matrixFrame = 0;
-  var matrixInterval = null;
 
   function resizeMatrix() {
-    // Render at quarter resolution for heavy GPU load
-    matrixCanvas.width = Math.floor(window.innerWidth / 3);
-    matrixCanvas.height = Math.floor(window.innerHeight / 3);
+    matrixCanvas.width = Math.floor(window.innerWidth / 2);
+    matrixCanvas.height = Math.floor(window.innerHeight / 2);
     matrixCanvas.style.width = window.innerWidth + 'px';
     matrixCanvas.style.height = window.innerHeight + 'px';
     matrixCanvas.style.imageRendering = 'pixelated';
@@ -172,10 +184,14 @@
     }
   }
 
-  // Use setInterval at 15fps instead of requestAnimationFrame (saves CPU)
+  var matrixFrameSkip = 0;
   function startMatrix() {
-    if (matrixInterval) return;
-    matrixInterval = setInterval(drawMatrix, 66); // ~15fps
+    function loop() {
+      matrixFrameSkip++;
+      if (matrixFrameSkip % 2 === 0) drawMatrix(); // 30fps
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
   }
   window.addEventListener('resize', resizeMatrix);
   resizeMatrix();
@@ -221,13 +237,10 @@
     for (var i = 0; i < timeData.length; i++) { var v = (timeData[i] - 128) / 128; sum += v * v; }
     var rms = Math.sqrt(sum / timeData.length);
 
-    // Update UI every 3rd frame to save CPU
-    if (listenFrame % 3 === 0) {
-      var pct = Math.min(rms * 500, 100);
-      levelFill.style.width = pct + '%';
-      levelFill.classList.toggle('hot', rms > config.sensitivity * 0.7);
-      drawMicVis();
-    }
+    var pct = Math.min(rms * 500, 100);
+    levelFill.style.width = pct + '%';
+    levelFill.classList.toggle('hot', rms > config.sensitivity * 0.7);
+    if (listenFrame % 2 === 0) drawMicVis();
 
     // Simple amplitude check — no frequency spread needed
     var now = Date.now();

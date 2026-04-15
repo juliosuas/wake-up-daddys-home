@@ -377,8 +377,7 @@ body.active .hud-sub { animation: none; }
   width: 0%;
   background: linear-gradient(90deg, var(--cyan), var(--green));
   border-radius: 3px;
-  transition: width 60ms;
-  box-shadow: 0 0 10px var(--cyan-glow);
+  transition: width 30ms;
 }
 .level-fill.hot {
   background: linear-gradient(90deg, var(--orange), var(--red));
