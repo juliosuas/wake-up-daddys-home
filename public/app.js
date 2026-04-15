@@ -121,13 +121,15 @@
     await initMicrophone();
   });
 
-  // Check if launched in stealth mode (?stealth in URL)
-  var stealthMode = window.location.search.indexOf('stealth') !== -1;
+  // Stealth mode: only when URL has ?stealth explicitly
+  var stealthMode = window.location.search === '?stealth';
 
   if (stealthMode) {
-    // Skip config, start listening immediately
     setupModal.style.display = 'none';
-    initMicrophone();
+    // Wait for page to fully load before init (gives YT API time)
+    window.addEventListener('load', function () {
+      setTimeout(function () { initMicrophone(); }, 500);
+    });
   }
 
   // ---- Load saved config ----
@@ -423,10 +425,11 @@
         return;
       }
       attempts++;
-      if (attempts <= 10) {
+      if (attempts <= 20) {
+        addLog('info', 'YouTube cargando... intento ' + attempts);
         setTimeout(tryPlay, 500);
       } else {
-        addLog('error', 'YouTube no pudo cargar despues de 10 intentos');
+        addLog('error', 'YouTube no cargo. Recarga la pagina.');
       }
     }
     tryPlay();
