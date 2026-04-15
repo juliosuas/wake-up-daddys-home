@@ -35,8 +35,6 @@
   var logCount = 0;
   var speechSynth = window.speechSynthesis;
   var COOLDOWN = 2000;
-  var dashboardWindow = null;
-  var musicWindow = null;
 
   // ---- DOM refs ----
   function $(s) { return document.getElementById(s); }
@@ -429,47 +427,38 @@
     startLogs();
     startPanels();
 
-    setTimeout(function () {
-      dashboardWindow = window.open(config.dashboardUrl, 'jarvis_dashboard');
-      addLog('ok', 'Dashboard abierto: ' + config.dashboardUrl);
-    }, 3500);
+    addLog('ok', 'Dashboard: ' + config.dashboardUrl);
 
     continuousVis();
-    // Keep listening for re-clap to restore windows
+    // Keep listening for re-clap
     listenLoop();
   }
 
-  // ---- YouTube ----
+  // ---- YouTube (embedded only, no new tabs) ----
   function playYouTube() {
     if (ytPlayerObj && ytReady) {
       ytPlayerObj.setVolume(40);
       ytPlayerObj.playVideo();
       addLog('ok', 'YouTube stream (vol 40%)');
     } else {
-      musicWindow = window.open(config.youtubeUrl, 'jarvis_music');
-      addLog('warn', 'YT API no listo, nueva pestana');
+      addLog('warn', 'YT API cargando, reintentando...');
+      // Retry after 1s if API not ready yet
+      setTimeout(function () {
+        if (ytPlayerObj && ytReady) {
+          ytPlayerObj.setVolume(40);
+          ytPlayerObj.playVideo();
+          addLog('ok', 'YouTube stream iniciado (retry)');
+        }
+      }, 1000);
     }
   }
 
-  // ---- Restore windows on re-clap ----
+  // ---- Restore on re-clap (just resume music, no new windows) ----
   function restoreWindows() {
-    addLog('info', 'Re-clap detectado — restaurando ventanas');
+    addLog('info', 'Re-clap detectado');
 
-    // Flash effect
     document.body.classList.add('flash');
     setTimeout(function () { document.body.classList.remove('flash'); }, 400);
-
-    // Try to focus/reopen dashboard
-    if (dashboardWindow && !dashboardWindow.closed) {
-      dashboardWindow.focus();
-    } else {
-      dashboardWindow = window.open(config.dashboardUrl, 'jarvis_dashboard');
-    }
-
-    // Try to focus/reopen music
-    if (musicWindow && !musicWindow.closed) {
-      musicWindow.focus();
-    }
 
     // Resume YouTube if paused
     if (ytPlayerObj && ytReady) {
@@ -480,10 +469,8 @@
       }
     }
 
-    // Focus this JARVIS window too
     window.focus();
-
-    addLog('ok', 'Ventanas restauradas');
+    addLog('ok', 'Sistema restaurado');
   }
 
   // ---- Fast Boot Terminal ----
@@ -502,7 +489,7 @@
       { text: 'ALL SYSTEMS NOMINAL', cls: 'success' },
       { text: '>> BIENVENIDO DE VUELTA, SENOR.', cls: 'info' },
     ];
-    typeLinesFast(lines, 15);
+    typeLinesFast(lines, 8);
   }
 
   function typeLinesFast(lines, speed) {
@@ -513,11 +500,11 @@
       var el = document.createElement('div');
       el.className = 't-line' + (cls ? ' ' + cls : '');
       terminalBody.appendChild(el);
-      if (!text) { li++; setTimeout(next, 30); return; }
+      if (!text) { li++; setTimeout(next, 15); return; }
       var ci = 0;
       function typeChar() {
-        if (ci < text.length) { el.textContent += text[ci]; ci++; setTimeout(typeChar, speed + Math.random() * 8); }
-        else { li++; terminalBody.scrollTop = terminalBody.scrollHeight; setTimeout(next, 40); }
+        if (ci < text.length) { el.textContent += text[ci]; ci++; setTimeout(typeChar, speed + Math.random() * 3); }
+        else { li++; terminalBody.scrollTop = terminalBody.scrollHeight; setTimeout(next, 15); }
       }
       typeChar();
     }
