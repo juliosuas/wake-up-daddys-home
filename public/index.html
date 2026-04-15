@@ -31,8 +31,38 @@
         </label>
       </div>
       <div id="voiceOptions">
-        <textarea id="voiceMessage" class="setup-input setup-textarea" rows="3" placeholder="Welcome message spoken on activation">Good evening, sir. Jeffrey OS is online. All systems nominal. Dashboard connected. News feed is live. Standing by for your command.</textarea>
-        <div class="setup-hint">JARVIS-style briefing — speaks simultaneously with music</div>
+        <label class="setup-label-sm">AGENT NAME</label>
+        <input type="text" id="agentName" class="setup-input" placeholder="JARVIS" value="JARVIS">
+
+        <div class="setup-row">
+          <div class="setup-col">
+            <label class="setup-label-sm">LANGUAGE</label>
+            <select id="voiceLang" class="setup-select">
+              <option value="es">Espanol</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <div class="setup-col">
+            <label class="setup-label-sm">GENDER</label>
+            <select id="voiceGender" class="setup-select">
+              <option value="male">Masculino / Male</option>
+              <option value="female">Femenino / Female</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="setup-label-sm">VOICE STYLE</label>
+        <div class="style-chips" id="styleChips">
+          <button class="style-chip active" data-style="formal">FORMAL</button>
+          <button class="style-chip" data-style="casual">CASUAL</button>
+          <button class="style-chip" data-style="military">MILITAR</button>
+          <button class="style-chip" data-style="whisper">SUSURRO</button>
+        </div>
+
+        <label class="setup-label-sm">BRIEFING MESSAGE</label>
+        <textarea id="voiceMessage" class="setup-input setup-textarea" rows="3" placeholder="Welcome message spoken on activation">Buenas noches senor. Jeffrey OS esta en linea. Todos los sistemas operativos. Dashboard conectado. Feed de noticias en vivo. Esperando sus ordenes, senor.</textarea>
+
+        <button class="setup-btn-sm" id="previewVoiceBtn">PREVIEW VOICE</button>
       </div>
 
       <label class="setup-label">MIC SENSITIVITY</label>
