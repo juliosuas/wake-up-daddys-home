@@ -1,0 +1,12 @@
+{
+  "name": "wake-up-daddys-home",
+  "version": "1.0.0",
+  "description": "Tony Stark style dashboard activation triggered by clap detection",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}

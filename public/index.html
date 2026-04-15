@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS // ACTIVATION SYSTEM</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Matrix Rain Canvas -->
+  <canvas id="matrix"></canvas>
+
+  <!-- Scan Lines Overlay -->
+  <div class="scanlines"></div>
+
+  <!-- HUD Container -->
+  <div class="hud-container" id="hud">
+    <!-- Rotating Circles -->
+    <div class="hud-circle circle-1"></div>
+    <div class="hud-circle circle-2"></div>
+    <div class="hud-circle circle-3"></div>
+
+    <!-- Center Status -->
+    <div class="center-status" id="centerStatus">
+      <div class="mic-icon" id="micIcon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+      </div>
+      <div class="status-text" id="statusText">SYSTEM STANDBY</div>
+      <div class="sub-status" id="subStatus">CLAP TO ACTIVATE</div>
+    </div>
+
+    <!-- Audio Level Bar -->
+    <div class="level-bar-container">
+      <div class="level-bar" id="levelBar"></div>
+    </div>
+  </div>
+
+  <!-- Terminal Output -->
+  <div class="terminal" id="terminal"></div>
+
+  <!-- Big Reveal Text -->
+  <div class="reveal-container" id="revealContainer">
+    <div class="reveal-text glitch" id="revealText" data-text="WAKE UP">WAKE UP</div>
+    <div class="reveal-sub" id="revealSub">DADDY'S HOME</div>
+  </div>
+
+  <!-- Corner Data Panels -->
+  <div class="data-panel top-left" id="panelTL">
+    <div class="panel-header">SYS.MONITOR</div>
+    <div class="panel-data" id="sysData"></div>
+  </div>
+  <div class="data-panel top-right" id="panelTR">
+    <div class="panel-header">NETWORK.SCAN</div>
+    <div class="panel-data" id="netData"></div>
+  </div>
+  <div class="data-panel bottom-left" id="panelBL">
+    <div class="panel-header">AUDIO.ANALYSIS</div>
+    <div class="panel-data" id="audioData"></div>
+  </div>
+  <div class="data-panel bottom-right" id="panelBR">
+    <div class="panel-header">NEURAL.LINK</div>
+    <div class="panel-data" id="neuralData"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
