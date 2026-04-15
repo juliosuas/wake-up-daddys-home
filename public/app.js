@@ -141,45 +141,45 @@
   } catch (e) {}
 
   // ---- Matrix Rain ----
-  var MATRIX_CHARS = '01アカサタナハマヤラワ<>{}|/=+*';
+  var MATRIX_CHARS = '01アカサタ<>{}|/*';
   var columns = [];
-  var FONT_SIZE = 20; // larger = fewer columns = faster on 4K
+  var FONT_SIZE = 24;
   var matrixFrame = 0;
+  var matrixInterval = null;
 
   function resizeMatrix() {
-    // Render at half resolution for performance on 4K
-    matrixCanvas.width = Math.floor(window.innerWidth / 2);
-    matrixCanvas.height = Math.floor(window.innerHeight / 2);
+    // Render at quarter resolution for heavy GPU load
+    matrixCanvas.width = Math.floor(window.innerWidth / 3);
+    matrixCanvas.height = Math.floor(window.innerHeight / 3);
     matrixCanvas.style.width = window.innerWidth + 'px';
     matrixCanvas.style.height = window.innerHeight + 'px';
+    matrixCanvas.style.imageRendering = 'pixelated';
     var cols = Math.floor(matrixCanvas.width / FONT_SIZE);
-    if (columns.length !== cols) {
-      columns = [];
-      for (var i = 0; i < cols; i++) columns.push(Math.random() * matrixCanvas.height / FONT_SIZE | 0);
-    }
+    columns = [];
+    for (var i = 0; i < cols; i++) columns.push(Math.random() * matrixCanvas.height / FONT_SIZE | 0);
   }
 
   function drawMatrix() {
-    matrixFrame++;
-    // Skip every other frame for performance
-    if (matrixFrame % 2 === 0) { requestAnimationFrame(drawMatrix); return; }
-
-    matrixCtx.fillStyle = 'rgba(10, 10, 15, 0.08)';
+    matrixCtx.fillStyle = 'rgba(10, 10, 15, 0.1)';
     matrixCtx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
     matrixCtx.font = FONT_SIZE + 'px monospace';
-    var alpha = activated ? '0.7' : '0.2';
-    matrixCtx.fillStyle = 'rgba(0, 229, 255, ' + alpha + ')';
+    matrixCtx.fillStyle = activated ? 'rgba(0,229,255,0.6)' : 'rgba(0,229,255,0.18)';
     for (var i = 0; i < columns.length; i++) {
       var ch = MATRIX_CHARS[Math.random() * MATRIX_CHARS.length | 0];
       matrixCtx.fillText(ch, i * FONT_SIZE, columns[i] * FONT_SIZE);
-      if (columns[i] * FONT_SIZE > matrixCanvas.height && Math.random() > 0.975) columns[i] = 0;
+      if (columns[i] * FONT_SIZE > matrixCanvas.height && Math.random() > 0.98) columns[i] = 0;
       else columns[i]++;
     }
-    requestAnimationFrame(drawMatrix);
+  }
+
+  // Use setInterval at 15fps instead of requestAnimationFrame (saves CPU)
+  function startMatrix() {
+    if (matrixInterval) return;
+    matrixInterval = setInterval(drawMatrix, 66); // ~15fps
   }
   window.addEventListener('resize', resizeMatrix);
   resizeMatrix();
-  drawMatrix();
+  startMatrix();
 
   // ---- Microphone ----
   async function initMicrophone() {
@@ -210,22 +210,28 @@
     levelThreshold.style.left = Math.min(config.sensitivity * 500, 100) + '%';
   }
 
-  // ---- Clap Detection ----
+  // ---- Clap Detection (simple amplitude-only, no spread check) ----
+  var listenFrame = 0;
   function listenLoop() {
+    listenFrame++;
     analyser.getByteTimeDomainData(timeData);
-    analyser.getByteFrequencyData(freqData);
+
+    // RMS amplitude
     var sum = 0;
     for (var i = 0; i < timeData.length; i++) { var v = (timeData[i] - 128) / 128; sum += v * v; }
     var rms = Math.sqrt(sum / timeData.length);
-    var lowE = 0, highE = 0, mid = freqData.length / 2;
-    for (var j = 0; j < freqData.length; j++) { if (j < mid) lowE += freqData[j]; else highE += freqData[j]; }
-    var spread = highE / (lowE + 1);
-    var pct = Math.min(rms * 500, 100);
-    levelFill.style.width = pct + '%';
-    levelFill.classList.toggle('hot', rms > config.sensitivity * 0.7);
-    drawMicVis();
+
+    // Update UI every 3rd frame to save CPU
+    if (listenFrame % 3 === 0) {
+      var pct = Math.min(rms * 500, 100);
+      levelFill.style.width = pct + '%';
+      levelFill.classList.toggle('hot', rms > config.sensitivity * 0.7);
+      drawMicVis();
+    }
+
+    // Simple amplitude check — no frequency spread needed
     var now = Date.now();
-    if (rms > config.sensitivity && spread > 0.03 && now - lastClapTime > COOLDOWN) {
+    if (rms > config.sensitivity && now - lastClapTime > COOLDOWN) {
       lastClapTime = now;
       if (!activated) activate();
       else restoreWindows();
@@ -378,8 +384,7 @@
     startLogs();
     startPanels();
     addLog('ok', 'Dashboard: ' + config.dashboardUrl);
-    continuousVis();
-    listenLoop();
+    // listenLoop already running and draws mic vis
   }
 
   // ---- YouTube (embedded only) ----
@@ -507,13 +512,7 @@
     }, 3500);
   }
 
-  function continuousVis() {
-    if (!analyser) return;
-    analyser.getByteTimeDomainData(timeData);
-    analyser.getByteFrequencyData(freqData);
-    drawMicVis();
-    requestAnimationFrame(continuousVis);
-  }
+  // continuousVis removed — listenLoop handles mic vis
 
   function startPanels() {
     var sets = {
