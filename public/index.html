@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JARVIS // ACTIVATION SYSTEM v2</title>
+  <title>JARVIS // ACTIVATION SYSTEM v3</title>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -22,9 +22,22 @@
       <input type="url" id="youtubeUrl" class="setup-input" placeholder="https://www.youtube.com/watch?v=..." value="https://www.youtube.com/watch?v=BN1WwnEDWAM">
       <div class="setup-hint">Default: "Should I Stay or Should I Go" — The Clash</div>
 
+      <label class="setup-label">AGENT VOICE</label>
+      <div class="setup-toggle-row">
+        <span class="setup-toggle-label" id="voiceToggleLabel">ENABLED</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="voiceEnabled" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div id="voiceOptions">
+        <textarea id="voiceMessage" class="setup-input setup-textarea" rows="3" placeholder="Welcome message spoken on activation">Good evening, sir. Jeffrey OS is online. All systems nominal. Dashboard connected. News feed is live. Standing by for your command.</textarea>
+        <div class="setup-hint">JARVIS-style briefing — speaks simultaneously with music</div>
+      </div>
+
       <label class="setup-label">MIC SENSITIVITY</label>
-      <input type="range" id="sensitivity" class="setup-range" min="0.05" max="0.8" step="0.05" value="0.30">
-      <div class="setup-hint" id="sensitivityLabel">Threshold: 0.30</div>
+      <input type="range" id="sensitivity" class="setup-range" min="0.02" max="0.5" step="0.01" value="0.08">
+      <div class="setup-hint" id="sensitivityLabel">Threshold: 0.08</div>
 
       <button class="setup-btn" id="startBtn">INITIALIZE JARVIS</button>
     </div>
@@ -45,11 +58,9 @@
     <div class="hud-ring ring-mid"></div>
     <div class="hud-ring ring-inner"></div>
 
-    <!-- Arc decorations -->
     <svg class="hud-arcs" viewBox="0 0 500 500">
       <circle cx="250" cy="250" r="230" fill="none" stroke="var(--cyan)" stroke-width="0.5" stroke-dasharray="20 10" opacity="0.3"/>
       <circle cx="250" cy="250" r="180" fill="none" stroke="var(--cyan)" stroke-width="0.5" stroke-dasharray="5 15" opacity="0.2"/>
-      <!-- Tick marks -->
       <g id="ticks" opacity="0.4"></g>
     </svg>
 
@@ -61,7 +72,6 @@
       <div class="hud-sub" id="hudSub">AWAITING ACTIVATION</div>
     </div>
 
-    <!-- Level meter -->
     <div class="level-meter">
       <div class="level-fill" id="levelFill"></div>
       <div class="level-threshold" id="levelThreshold"></div>
@@ -77,6 +87,18 @@
       <span class="terminal-title">JARVIS TERMINAL</span>
     </div>
     <div class="terminal-body" id="terminalBody"></div>
+  </div>
+
+  <!-- Logs Panel -->
+  <div class="logs-panel" id="logsPanel">
+    <div class="terminal-header">
+      <span class="terminal-dot red"></span>
+      <span class="terminal-dot yellow"></span>
+      <span class="terminal-dot green"></span>
+      <span class="terminal-title">SYSTEM LOGS</span>
+      <span class="log-count" id="logCount">0</span>
+    </div>
+    <div class="logs-body" id="logsBody"></div>
   </div>
 
   <!-- Reveal -->
@@ -103,15 +125,32 @@
     <div class="panel-content" id="panelBRData"></div>
   </div>
 
+  <!-- Voice indicator + controls -->
+  <div class="voice-bar" id="voiceBar">
+    <div class="voice-indicator" id="voiceIndicator">
+      <div class="voice-wave"></div>
+      <div class="voice-wave"></div>
+      <div class="voice-wave"></div>
+      <div class="voice-wave"></div>
+      <div class="voice-wave"></div>
+    </div>
+    <span class="voice-label" id="voiceLabel">VOICE READY</span>
+    <button class="voice-btn" id="voiceBtnToggle" title="Play / Pause briefing">PLAY BRIEFING</button>
+  </div>
+
   <!-- Corner brackets -->
   <div class="corner corner-tl"></div>
   <div class="corner corner-tr"></div>
   <div class="corner corner-bl"></div>
   <div class="corner corner-br"></div>
 
-  <!-- Hidden YouTube player -->
-  <iframe id="ytPlayer" style="display:none" allow="autoplay"></iframe>
+  <!-- YouTube Player (controlled via IFrame API) -->
+  <div id="ytContainer" style="position:fixed;bottom:-400px;left:-400px;width:320px;height:180px;z-index:-1;">
+    <div id="ytPlayer"></div>
+  </div>
 
+  <!-- YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
   <script src="app.js"></script>
 </body>
 </html>
