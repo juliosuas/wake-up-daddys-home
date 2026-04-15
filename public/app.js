@@ -406,17 +406,24 @@
     // listenLoop already running and draws mic vis
   }
 
-  // ---- YouTube (embedded only) ----
+  // ---- YouTube (embedded only, robust retry) ----
   function playYouTube() {
-    if (ytPlayerObj && ytReady) {
-      ytPlayerObj.setVolume(40);
-      ytPlayerObj.playVideo();
-      addLog('ok', 'YouTube (vol 40%)');
-    } else {
-      setTimeout(function () {
-        if (ytPlayerObj && ytReady) { ytPlayerObj.setVolume(40); ytPlayerObj.playVideo(); }
-      }, 1000);
+    var attempts = 0;
+    function tryPlay() {
+      if (ytPlayerObj && ytReady) {
+        ytPlayerObj.setVolume(40);
+        ytPlayerObj.playVideo();
+        addLog('ok', 'YouTube (vol 40%)');
+        return;
+      }
+      attempts++;
+      if (attempts <= 10) {
+        setTimeout(tryPlay, 500);
+      } else {
+        addLog('error', 'YouTube no pudo cargar despues de 10 intentos');
+      }
     }
+    tryPlay();
   }
 
   // ---- Fullscreen ----
