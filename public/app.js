@@ -121,19 +121,7 @@
     await initMicrophone();
   });
 
-  // Auto-init: try to get mic immediately, show config only if it fails
-  (async function autoInit() {
-    try {
-      var testStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      testStream.getTracks().forEach(function(t) { t.stop(); });
-      // Mic available — skip config, go straight to listening
-      setupModal.classList.add('hidden');
-      setTimeout(function () { setupModal.style.display = 'none'; }, 300);
-      await initMicrophone();
-    } catch(e) {
-      // Mic not available yet — show config screen, user clicks Initialize
-    }
-  })();
+  // Config screen always shows — user clicks INITIALIZE when ready
 
   // ---- Load saved config ----
   try {
