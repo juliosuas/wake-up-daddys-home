@@ -237,8 +237,10 @@
     if (listenFrame % 2 === 0) drawMicVis();
 
     // Peak check — single clap should trigger
+    // After activation, use higher threshold to avoid YouTube audio triggering re-clap
+    var threshold = activated ? Math.max(config.sensitivity * 3, 0.5) : config.sensitivity;
     var now = Date.now();
-    if (peak > config.sensitivity && now - lastClapTime > COOLDOWN) {
+    if (peak > threshold && now - lastClapTime > COOLDOWN) {
       lastClapTime = now;
       if (!activated) activate();
       else restoreWindows();
@@ -422,22 +424,14 @@
     else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
   }
 
-  // ---- Restore on re-clap ----
+  // ---- Restore on re-clap (no flash, higher threshold to avoid false triggers) ----
   function restoreWindows() {
-    addLog('info', 'Re-clap detectado');
-    document.body.classList.add('flash');
-    setTimeout(function () { document.body.classList.remove('flash'); }, 400);
-
-    // Go fullscreen again
     goFullscreen();
-
-    // Resume YouTube if paused
     if (ytPlayerObj && ytReady && ytPlayerObj.getPlayerState() === 2) {
       ytPlayerObj.playVideo();
       addLog('ok', 'YouTube reanudado');
     }
     window.focus();
-    addLog('ok', 'Pantalla restaurada');
   }
 
   // ---- Fast Boot Terminal ----
