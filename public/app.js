@@ -19,12 +19,13 @@
 
   var audioCtx, analyser, micStream, freqData, timeData;
   var activated = false;
+  var micInitialized = false;
   var lastClapTime = 0;
   var ytReady = false;
   var ytPlayerObj = null;
   var logCount = 0;
-  var voiceAudio = null; // ElevenLabs audio element
-  var COOLDOWN = 2000;
+  var voiceAudio = null;
+  var COOLDOWN = 800;
 
   function $(s) { return document.getElementById(s); }
   var setupModal       = $('setupModal');
@@ -199,6 +200,8 @@
 
   // ---- Microphone ----
   async function initMicrophone() {
+    if (micInitialized) return;
+    micInitialized = true;
     try {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       var stream = await navigator.mediaDevices.getUserMedia({
