@@ -26,13 +26,26 @@
       <div class="setup-toggle-row">
         <span class="setup-toggle-label" id="voiceToggleLabel">ENABLED</span>
         <label class="toggle-switch">
-          <input type="checkbox" id="voiceEnabled" checked>
+          <input type="checkbox" id="voiceEnabled">
           <span class="toggle-slider"></span>
         </label>
       </div>
       <div id="voiceOptions">
         <label class="setup-label-sm">AGENT NAME</label>
         <input type="text" id="agentName" class="setup-input" placeholder="JARVIS" value="JARVIS">
+
+        <label class="setup-label-sm">VOICE (ELEVENLABS)</label>
+        <select id="voiceSelect" class="setup-select">
+          <option value="onwK4e9ZLuTAKqWW03F9">Daniel — British Broadcaster (JARVIS)</option>
+          <option value="JBFqnCBsd6RMkjVDRZzb">George — British Storyteller</option>
+          <option value="nPczCjzI2devNBz1zQrb">Brian — Deep, Resonant</option>
+          <option value="cjVigY5qzO86Huf0OWal">Eric — Smooth, Trustworthy</option>
+          <option value="pNInz6obpgDQGcFmaJgB">Adam — Dominant, Firm</option>
+          <option value="Xb7hH8MSUJpSbSDYk0k2">Alice — British Female</option>
+          <option value="EXAVITQu4vr4xnSDxMaL">Sarah — Confident Female</option>
+          <option value="pFZP5JQG7iQjIQuC4Bku">Lily — Velvety British Female</option>
+        </select>
+        <div class="setup-hint" id="voiceHint">Powered by ElevenLabs AI</div>
 
         <div class="setup-row">
           <div class="setup-col">
@@ -42,21 +55,6 @@
               <option value="en">English</option>
             </select>
           </div>
-          <div class="setup-col">
-            <label class="setup-label-sm">GENDER</label>
-            <select id="voiceGender" class="setup-select">
-              <option value="male">Masculino / Male</option>
-              <option value="female">Femenino / Female</option>
-            </select>
-          </div>
-        </div>
-
-        <label class="setup-label-sm">VOICE STYLE</label>
-        <div class="style-chips" id="styleChips">
-          <button class="style-chip active" data-style="formal">FORMAL</button>
-          <button class="style-chip" data-style="casual">CASUAL</button>
-          <button class="style-chip" data-style="military">MILITAR</button>
-          <button class="style-chip" data-style="whisper">SUSURRO</button>
         </div>
 
         <label class="setup-label-sm">BRIEFING MESSAGE</label>

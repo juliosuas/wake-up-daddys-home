@@ -1,42 +1,31 @@
 // ============================================================
-//  JARVIS ACTIVATION SYSTEM v4.0
-//  Customizable voice: language, gender, style, agent name
-//  Voice tuned to sound like JARVIS from Iron Man
+//  JARVIS ACTIVATION SYSTEM v4.1
+//  ElevenLabs voice — real AI voice, not robotic TTS
 // ============================================================
 
 (() => {
   'use strict';
 
-  // ---- Voice style presets (pitch, rate combos) ----
-  var VOICE_STYLES = {
-    formal:   { pitch: 0.75, rate: 0.88, desc: 'JARVIS — grave, calmado, profesional' },
-    casual:   { pitch: 1.0,  rate: 1.0,  desc: 'Natural, conversacional' },
-    military: { pitch: 0.6,  rate: 0.82, desc: 'Tono militar, autoritativo' },
-    whisper:  { pitch: 0.85, rate: 0.75, desc: 'Susurro, misterioso' },
-  };
-
-  // ---- State ----
   var config = {
     dashboardUrl: 'http://192.168.1.66:8080',
     youtubeUrl: 'https://www.youtube.com/watch?v=BN1WwnEDWAM',
     voiceMessage: 'Buenas noches senor. Jeffrey OS esta en linea. Todos los sistemas operativos. Dashboard conectado. Feed de noticias en vivo. Esperando sus ordenes, senor.',
-    voiceEnabled: true,
+    voiceEnabled: false,
     agentName: 'JARVIS',
+    voiceId: 'onwK4e9ZLuTAKqWW03F9', // Daniel — British Broadcaster
     voiceLang: 'es',
-    voiceGender: 'male',
-    voiceStyle: 'formal',
     sensitivity: 0.08,
   };
+
   var audioCtx, analyser, micStream, freqData, timeData;
   var activated = false;
   var lastClapTime = 0;
   var ytReady = false;
   var ytPlayerObj = null;
   var logCount = 0;
-  var speechSynth = window.speechSynthesis;
+  var voiceAudio = null; // ElevenLabs audio element
   var COOLDOWN = 2000;
 
-  // ---- DOM refs ----
   function $(s) { return document.getElementById(s); }
   var setupModal       = $('setupModal');
   var startBtn         = $('startBtn');
@@ -46,8 +35,8 @@
   var voiceToggleLabel = $('voiceToggleLabel');
   var voiceOptions     = $('voiceOptions');
   var agentNameInput   = $('agentName');
+  var voiceSelect      = $('voiceSelect');
   var voiceLangSelect  = $('voiceLang');
-  var voiceGenderSelect = $('voiceGender');
   var previewVoiceBtn  = $('previewVoiceBtn');
   var matrixCanvas     = $('matrix');
   var matrixCtx        = matrixCanvas.getContext('2d');
@@ -66,18 +55,6 @@
   var logsBody         = $('logsBody');
   var logCountEl       = $('logCount');
 
-  // ---- Style chips ----
-  var styleChips = document.querySelectorAll('.style-chip');
-  for (var sc = 0; sc < styleChips.length; sc++) {
-    (function (chip) {
-      chip.addEventListener('click', function () {
-        for (var j = 0; j < styleChips.length; j++) styleChips[j].classList.remove('active');
-        chip.classList.add('active');
-        config.voiceStyle = chip.getAttribute('data-style');
-      });
-    })(styleChips[sc]);
-  }
-
   // ---- YouTube IFrame API ----
   window.onYouTubeIframeAPIReady = function () {
     var match = config.youtubeUrl.match(/(?:v=|youtu\.be\/|\/embed\/)([a-zA-Z0-9_-]{11})/);
@@ -86,10 +63,7 @@
       videoId: videoId,
       playerVars: { autoplay: 0, controls: 0, modestbranding: 1 },
       events: {
-        onReady: function () {
-          ytReady = true;
-          ytPlayerObj.setVolume(40);
-        },
+        onReady: function () { ytReady = true; ytPlayerObj.setVolume(40); },
       },
     });
   };
@@ -107,9 +81,14 @@
     var name = agentNameInput.value || 'JARVIS';
     var lang = voiceLangSelect.value;
     var preview = lang === 'es'
-      ? (name + ' en linea. Sistemas operativos. Esperando ordenes.')
-      : (name + ' online. Systems operational. Awaiting your command.');
-    speakText(preview);
+      ? (name + ' en linea. Sistemas operativos. Esperando ordenes, senor.')
+      : (name + ' online. All systems operational. Awaiting your command, sir.');
+    previewVoiceBtn.textContent = 'GENERATING...';
+    previewVoiceBtn.disabled = true;
+    playElevenLabsVoice(preview, function () {
+      previewVoiceBtn.textContent = 'PREVIEW VOICE';
+      previewVoiceBtn.disabled = false;
+    });
   });
 
   // ---- Setup ----
@@ -124,14 +103,11 @@
     config.voiceMessage = $('voiceMessage').value || config.voiceMessage;
     config.voiceEnabled = voiceEnabledCb.checked;
     config.agentName = agentNameInput.value || 'JARVIS';
+    config.voiceId = voiceSelect.value;
     config.voiceLang = voiceLangSelect.value;
-    config.voiceGender = voiceGenderSelect.value;
     config.sensitivity = parseFloat(sensitivityInput.value);
-    // voiceStyle already set by chip click
 
     try { localStorage.setItem('jarvis_config', JSON.stringify(config)); } catch (e) {}
-
-    // Update title with agent name
     document.title = config.agentName + ' // ACTIVATION SYSTEM';
 
     if (ytPlayerObj && ytReady) {
@@ -141,7 +117,6 @@
 
     setupModal.classList.add('hidden');
     setTimeout(function () { setupModal.style.display = 'none'; }, 500);
-
     await initMicrophone();
   });
 
@@ -158,14 +133,10 @@
       voiceToggleLabel.classList.toggle('off', !config.voiceEnabled);
       voiceOptions.classList.toggle('disabled', !config.voiceEnabled);
       agentNameInput.value = config.agentName;
+      voiceSelect.value = config.voiceId;
       voiceLangSelect.value = config.voiceLang;
-      voiceGenderSelect.value = config.voiceGender;
       sensitivityInput.value = config.sensitivity;
       sensitivityLabel.textContent = 'Threshold: ' + config.sensitivity.toFixed(2);
-      // Restore style chip
-      for (var s = 0; s < styleChips.length; s++) {
-        styleChips[s].classList.toggle('active', styleChips[s].getAttribute('data-style') === config.voiceStyle);
-      }
     }
   } catch (e) {}
 
@@ -200,7 +171,6 @@
     }
     requestAnimationFrame(drawMatrix);
   }
-
   window.addEventListener('resize', resizeMatrix);
   resizeMatrix();
   drawMatrix();
@@ -234,7 +204,7 @@
     levelThreshold.style.left = Math.min(config.sensitivity * 500, 100) + '%';
   }
 
-  // ---- Clap Detection (keeps listening after activation for re-clap) ----
+  // ---- Clap Detection ----
   function listenLoop() {
     analyser.getByteTimeDomainData(timeData);
     analyser.getByteFrequencyData(freqData);
@@ -251,12 +221,8 @@
     var now = Date.now();
     if (rms > config.sensitivity && spread > 0.1 && now - lastClapTime > COOLDOWN) {
       lastClapTime = now;
-      if (!activated) {
-        activate();
-      } else {
-        // Re-clap: bring everything back to focus
-        restoreWindows();
-      }
+      if (!activated) activate();
+      else restoreWindows();
     }
     requestAnimationFrame(listenLoop);
   }
@@ -287,116 +253,96 @@
   }
 
   // ============================================================
-  //  VOICE ENGINE — JARVIS Iron Man style
+  //  ELEVENLABS VOICE ENGINE
   // ============================================================
 
-  /**
-   * Pick the best voice matching language + gender preference.
-   * For JARVIS effect: prefer Google UK English Male or Daniel (macOS).
-   */
-  function pickVoice() {
-    var voices = speechSynth.getVoices();
-    var lang = config.voiceLang;
-    var wantFemale = config.voiceGender === 'female';
-
-    // Build priority list based on language + gender
-    var tests = [];
-
-    if (lang === 'es') {
-      if (wantFemale) {
-        tests.push(function (v) { return v.name.indexOf('Google') !== -1 && v.lang.startsWith('es') && (v.name.indexOf('Female') !== -1 || v.name.indexOf('femenin') !== -1); });
-        tests.push(function (v) { return v.lang.startsWith('es') && (v.name.indexOf('Female') !== -1 || v.name.indexOf('Paulina') !== -1 || v.name.indexOf('Monica') !== -1); });
-        tests.push(function (v) { return v.lang.startsWith('es'); });
-      } else {
-        tests.push(function (v) { return v.name.indexOf('Google') !== -1 && v.lang.startsWith('es'); });
-        tests.push(function (v) { return v.lang.startsWith('es') && (v.name.indexOf('Jorge') !== -1 || v.name.indexOf('Juan') !== -1 || v.name.indexOf('Diego') !== -1); });
-        tests.push(function (v) { return v.lang.startsWith('es'); });
-      }
-    } else {
-      // English — JARVIS voices
-      if (wantFemale) {
-        tests.push(function (v) { return v.name === 'Google UK English Female'; });
-        tests.push(function (v) { return v.lang.startsWith('en') && (v.name.indexOf('Female') !== -1 || v.name.indexOf('Samantha') !== -1 || v.name.indexOf('Karen') !== -1); });
-        tests.push(function (v) { return v.lang === 'en-GB'; });
-        tests.push(function (v) { return v.lang.startsWith('en'); });
-      } else {
-        tests.push(function (v) { return v.name === 'Google UK English Male'; });
-        tests.push(function (v) { return v.name === 'Daniel'; }); // macOS JARVIS-like
-        tests.push(function (v) { return v.name.indexOf('UK') !== -1 && v.lang.startsWith('en'); });
-        tests.push(function (v) { return v.lang === 'en-GB'; });
-        tests.push(function (v) { return v.name === 'Fred'; }); // macOS deep male
-        tests.push(function (v) { return v.lang.startsWith('en') && v.name.indexOf('Male') !== -1; });
-        tests.push(function (v) { return v.lang.startsWith('en'); });
-      }
+  function playElevenLabsVoice(text, onEnd) {
+    // Stop any current playback
+    if (voiceAudio) {
+      voiceAudio.pause();
+      voiceAudio = null;
     }
 
-    for (var t = 0; t < tests.length; t++) {
-      for (var i = 0; i < voices.length; i++) {
-        if (tests[t](voices[i])) return voices[i];
-      }
-    }
-    return voices[0] || null;
-  }
+    voiceIndicator.classList.add('speaking');
+    voiceLabel.textContent = config.agentName + ' HABLANDO...';
+    voiceBtnToggle.textContent = 'PAUSAR';
+    voiceBtnToggle.classList.add('active');
+    addLog('info', config.agentName + ' generando voz...');
 
-  /**
-   * Speak text with current voice settings.
-   * Style presets control pitch and rate for JARVIS-like effect.
-   */
-  function speakText(text) {
-    if (!speechSynth) return;
-    speechSynth.cancel();
+    fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        voiceId: config.voiceId,
+        text: text,
+        lang: config.voiceLang,
+      }),
+    })
+    .then(function (res) {
+      if (!res.ok) throw new Error('TTS error ' + res.status);
+      return res.blob();
+    })
+    .then(function (blob) {
+      var url = URL.createObjectURL(blob);
+      voiceAudio = new Audio(url);
+      voiceAudio.volume = 1.0;
 
-    var style = VOICE_STYLES[config.voiceStyle] || VOICE_STYLES.formal;
-    var utt = new SpeechSynthesisUtterance(text);
-    utt.pitch = style.pitch;
-    utt.rate = style.rate;
-    utt.volume = 1.0;
+      voiceAudio.onplay = function () {
+        addLog('ok', config.agentName + ' hablando (ElevenLabs)');
+      };
+      voiceAudio.onended = function () {
+        voiceIndicator.classList.remove('speaking');
+        voiceLabel.textContent = 'BRIEFING COMPLETO';
+        voiceBtnToggle.textContent = 'REPRODUCIR';
+        voiceBtnToggle.classList.remove('active');
+        addLog('ok', 'Briefing completo');
+        URL.revokeObjectURL(url);
+        voiceAudio = null;
+        if (onEnd) onEnd();
+      };
+      voiceAudio.onerror = function () {
+        voiceIndicator.classList.remove('speaking');
+        voiceLabel.textContent = 'ERROR';
+        voiceBtnToggle.textContent = 'REINTENTAR';
+        voiceBtnToggle.classList.remove('active');
+        addLog('error', 'Error reproduciendo audio');
+        if (onEnd) onEnd();
+      };
 
-    var voice = pickVoice();
-    if (voice) utt.voice = voice;
-
-    utt.onstart = function () {
-      voiceIndicator.classList.add('speaking');
-      voiceLabel.textContent = config.agentName + ' HABLANDO...';
-      voiceBtnToggle.textContent = 'PAUSAR';
-      voiceBtnToggle.classList.add('active');
-      addLog('info', config.agentName + ' hablando...');
-    };
-    utt.onend = function () {
-      voiceIndicator.classList.remove('speaking');
-      voiceLabel.textContent = 'BRIEFING COMPLETO';
-      voiceBtnToggle.textContent = 'REPRODUCIR';
-      voiceBtnToggle.classList.remove('active');
-      addLog('ok', 'Briefing de voz completo');
-    };
-    utt.onerror = function () {
+      voiceAudio.play();
+    })
+    .catch(function (err) {
       voiceIndicator.classList.remove('speaking');
       voiceLabel.textContent = 'ERROR';
       voiceBtnToggle.textContent = 'REINTENTAR';
       voiceBtnToggle.classList.remove('active');
-    };
-
-    speechSynth.speak(utt);
+      addLog('error', 'ElevenLabs: ' + err.message);
+      if (onEnd) onEnd();
+    });
   }
 
-  // ---- Play / Pause / Resume ----
+  // Play / Pause / Resume
   voiceBtnToggle.addEventListener('click', function () {
-    if (!speechSynth || !config.voiceEnabled) return;
-    if (speechSynth.speaking && !speechSynth.paused) {
-      speechSynth.pause();
+    if (!config.voiceEnabled) return;
+
+    // Currently playing → pause
+    if (voiceAudio && !voiceAudio.paused) {
+      voiceAudio.pause();
       voiceLabel.textContent = 'PAUSADO';
       voiceBtnToggle.textContent = 'REANUDAR';
       voiceIndicator.classList.remove('speaking');
       return;
     }
-    if (speechSynth.paused) {
-      speechSynth.resume();
+    // Paused → resume
+    if (voiceAudio && voiceAudio.paused && voiceAudio.currentTime > 0) {
+      voiceAudio.play();
       voiceLabel.textContent = config.agentName + ' HABLANDO...';
       voiceBtnToggle.textContent = 'PAUSAR';
       voiceIndicator.classList.add('speaking');
       return;
     }
-    speakText(config.voiceMessage);
+    // Fresh briefing
+    playElevenLabsVoice(config.voiceMessage);
   });
 
   // ============================================================
@@ -412,12 +358,15 @@
     hudStatus.textContent = 'ACTIVATED';
     hudSub.textContent = 'SYSTEMS ONLINE';
 
+    // Go fullscreen
+    goFullscreen();
+
     showReveal();
     playYouTube();
 
     if (config.voiceEnabled) {
-      // Small delay so music starts first, then voice over it
-      setTimeout(function () { speakText(config.voiceMessage); }, 400);
+      // Voice starts 400ms after music
+      setTimeout(function () { playElevenLabsVoice(config.voiceMessage); }, 400);
     } else {
       voiceLabel.textContent = 'VOICE OFF';
       voiceBtnToggle.style.display = 'none';
@@ -426,73 +375,65 @@
     fastBoot();
     startLogs();
     startPanels();
-
     addLog('ok', 'Dashboard: ' + config.dashboardUrl);
-
     continuousVis();
-    // Keep listening for re-clap
     listenLoop();
   }
 
-  // ---- YouTube (embedded only, no new tabs) ----
+  // ---- YouTube (embedded only) ----
   function playYouTube() {
     if (ytPlayerObj && ytReady) {
       ytPlayerObj.setVolume(40);
       ytPlayerObj.playVideo();
-      addLog('ok', 'YouTube stream (vol 40%)');
+      addLog('ok', 'YouTube (vol 40%)');
     } else {
-      addLog('warn', 'YT API cargando, reintentando...');
-      // Retry after 1s if API not ready yet
       setTimeout(function () {
-        if (ytPlayerObj && ytReady) {
-          ytPlayerObj.setVolume(40);
-          ytPlayerObj.playVideo();
-          addLog('ok', 'YouTube stream iniciado (retry)');
-        }
+        if (ytPlayerObj && ytReady) { ytPlayerObj.setVolume(40); ytPlayerObj.playVideo(); }
       }, 1000);
     }
   }
 
-  // ---- Restore on re-clap (just resume music, no new windows) ----
+  // ---- Fullscreen ----
+  function goFullscreen() {
+    var el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+  }
+
+  // ---- Restore on re-clap ----
   function restoreWindows() {
     addLog('info', 'Re-clap detectado');
-
     document.body.classList.add('flash');
     setTimeout(function () { document.body.classList.remove('flash'); }, 400);
 
-    // Resume YouTube if paused
-    if (ytPlayerObj && ytReady) {
-      var state = ytPlayerObj.getPlayerState();
-      if (state === 2) { // paused
-        ytPlayerObj.playVideo();
-        addLog('ok', 'YouTube reanudado');
-      }
-    }
+    // Go fullscreen again
+    goFullscreen();
 
+    // Resume YouTube if paused
+    if (ytPlayerObj && ytReady && ytPlayerObj.getPlayerState() === 2) {
+      ytPlayerObj.playVideo();
+      addLog('ok', 'YouTube reanudado');
+    }
     window.focus();
-    addLog('ok', 'Sistema restaurado');
+    addLog('ok', 'Pantalla restaurada');
   }
 
   // ---- Fast Boot Terminal ----
   function fastBoot() {
     var name = config.agentName;
     var lines = [
-      { text: name + ' PROTOCOL v4.0 BOOT', cls: 'info' },
+      { text: name + ' PROTOCOL v4.1 BOOT', cls: 'info' },
       { text: 'BIOMETRIC .......... AUTHORIZED', cls: 'success' },
       { text: 'NEURAL LINK ........ CONNECTED', cls: 'success' },
       { text: 'ENCRYPTION ......... AES-256', cls: 'success' },
       { text: 'MAINFRAME .......... ONLINE', cls: 'success' },
-      { text: 'VOICE ENGINE ....... ' + config.voiceStyle.toUpperCase() + ' [' + config.voiceLang.toUpperCase() + ']', cls: 'info' },
+      { text: 'VOICE ENGINE ....... ELEVENLABS AI', cls: 'info' },
       { text: 'AGENT .............. ' + name, cls: 'info' },
       { text: 'DASHBOARD: ' + config.dashboardUrl, cls: 'info' },
-      { text: 'YOUTUBE ............ STREAMING', cls: 'info' },
       { text: 'ALL SYSTEMS NOMINAL', cls: 'success' },
       { text: '>> BIENVENIDO DE VUELTA, SENOR.', cls: 'info' },
     ];
-    typeLinesFast(lines, 8);
-  }
-
-  function typeLinesFast(lines, speed) {
     var li = 0;
     function next() {
       if (li >= lines.length) return;
@@ -500,10 +441,9 @@
       var el = document.createElement('div');
       el.className = 't-line' + (cls ? ' ' + cls : '');
       terminalBody.appendChild(el);
-      if (!text) { li++; setTimeout(next, 15); return; }
       var ci = 0;
       function typeChar() {
-        if (ci < text.length) { el.textContent += text[ci]; ci++; setTimeout(typeChar, speed + Math.random() * 3); }
+        if (ci < text.length) { el.textContent += text[ci]; ci++; setTimeout(typeChar, 8 + Math.random() * 3); }
         else { li++; terminalBody.scrollTop = terminalBody.scrollHeight; setTimeout(next, 15); }
       }
       typeChar();
@@ -531,18 +471,10 @@
     var time = now.toTimeString().slice(0, 8);
     var entry = document.createElement('div');
     entry.className = 'log-entry';
-    var timeSpan = document.createElement('span');
-    timeSpan.className = 'log-time';
-    timeSpan.textContent = time;
-    var levelSpan = document.createElement('span');
-    levelSpan.className = 'log-level ' + level;
-    levelSpan.textContent = level.toUpperCase();
-    var msgSpan = document.createElement('span');
-    msgSpan.className = 'log-msg';
-    msgSpan.textContent = msg;
-    entry.appendChild(timeSpan);
-    entry.appendChild(levelSpan);
-    entry.appendChild(msgSpan);
+    var ts = document.createElement('span'); ts.className = 'log-time'; ts.textContent = time;
+    var lv = document.createElement('span'); lv.className = 'log-level ' + level; lv.textContent = level.toUpperCase();
+    var ms = document.createElement('span'); ms.className = 'log-msg'; ms.textContent = msg;
+    entry.appendChild(ts); entry.appendChild(lv); entry.appendChild(ms);
     logsBody.appendChild(entry);
     logsBody.scrollTop = logsBody.scrollHeight;
     logCount++;
@@ -550,10 +482,9 @@
   }
 
   function startLogs() {
-    addLog('info', config.agentName + ' v4.0 activado');
+    addLog('info', config.agentName + ' v4.1 activado');
     addLog('ok', 'Aplauso detectado');
-    addLog('info', 'Stream de musica iniciado');
-    if (config.voiceEnabled) addLog('info', 'Voz: ' + config.voiceStyle + ' [' + config.voiceLang + '/' + config.voiceGender + ']');
+    addLog('info', 'ElevenLabs voice: ' + config.voiceId.substring(0, 8));
     var baseMsgs = [
       ['ok', 'Heartbeat OK'], ['info', 'Network: 14 hosts'], ['ok', 'Firewall: activo'],
       ['info', 'CPU load'], ['ok', 'RAM: 62.1/64 GB'], ['info', 'GPU temp'],
@@ -587,7 +518,7 @@
       panelTLData: ['CPU: 97.8% [OVERDRIVE]','RAM: 62.1 / 64 GB','GPU: RTX 4090 @ 2.8GHz','VRAM: 23.4 / 24 GB','DISK I/O: 3.4 GB/s','CORE TEMP: 68C','UPTIME: 1247:42:18','THREADS: 4,291'],
       panelTRData: ['TARGET: 192.168.1.0/24','NODES ONLINE: 14','PORTS: 22,80,443,8080','LATENCY: 1.8ms','THROUGHPUT: 2.4 Gbps','FIREWALL: ACTIVE','ENCRYPTION: AES-256','STATUS: SECURE'],
       panelBLData: ['SOURCE: YOUTUBE STREAM','CODEC: OPUS 128kbps','CHANNELS: STEREO','SAMPLE: 48000 Hz','DASHBOARD: CONNECTED','NEWS FEED: LIVE','BUFFER: 240ms','SYNC: LOCKED'],
-      panelBRData: ['MODEL: '+config.agentName+' v4.0','PARAMS: 175B','INFERENCE: 38ms','CONFIDENCE: 99.8%','CONTEXT: 1M TOKENS','MODE: AUTONOMOUS','LEARNING: ACTIVE','ACCURACY: 99.97%'],
+      panelBRData: ['MODEL: '+config.agentName+' v4.1','PARAMS: 175B','INFERENCE: 38ms','CONFIDENCE: 99.8%','CONTEXT: 1M TOKENS','MODE: AUTONOMOUS','LEARNING: ACTIVE','ACCURACY: 99.97%'],
     };
     var keys = Object.keys(sets);
     for (var k = 0; k < keys.length; k++) {
