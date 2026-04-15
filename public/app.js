@@ -14,7 +14,7 @@
     agentName: 'JARVIS',
     voiceId: 'onwK4e9ZLuTAKqWW03F9', // Daniel — British Broadcaster
     voiceLang: 'es',
-    sensitivity: 0.05,
+    sensitivity: 0.15,
   };
 
   var audioCtx, analyser, micStream, freqData, timeData;
@@ -226,28 +226,31 @@
   }
 
   function updateThresholdMarker() {
-    levelThreshold.style.left = Math.min(config.sensitivity * 500, 100) + '%';
+    levelThreshold.style.left = Math.min(config.sensitivity * 200, 100) + '%';
   }
 
-  // ---- Clap Detection (simple amplitude-only, no spread check) ----
+  // ---- Clap Detection (peak detection — catches transients better than RMS) ----
   var listenFrame = 0;
   function listenLoop() {
     listenFrame++;
     analyser.getByteTimeDomainData(timeData);
 
-    // RMS amplitude
-    var sum = 0;
-    for (var i = 0; i < timeData.length; i++) { var v = (timeData[i] - 128) / 128; sum += v * v; }
-    var rms = Math.sqrt(sum / timeData.length);
+    // Peak detection — finds the loudest sample in the buffer
+    // Much better than RMS for short transients like claps
+    var peak = 0;
+    for (var i = 0; i < timeData.length; i++) {
+      var v = Math.abs((timeData[i] - 128) / 128);
+      if (v > peak) peak = v;
+    }
 
-    var pct = Math.min(rms * 500, 100);
+    var pct = Math.min(peak * 200, 100);
     levelFill.style.width = pct + '%';
-    levelFill.classList.toggle('hot', rms > config.sensitivity * 0.7);
+    levelFill.classList.toggle('hot', peak > config.sensitivity * 0.7);
     if (listenFrame % 2 === 0) drawMicVis();
 
-    // Simple amplitude check — no frequency spread needed
+    // Peak check — single clap should trigger
     var now = Date.now();
-    if (rms > config.sensitivity && now - lastClapTime > COOLDOWN) {
+    if (peak > config.sensitivity && now - lastClapTime > COOLDOWN) {
       lastClapTime = now;
       if (!activated) activate();
       else restoreWindows();
