@@ -212,7 +212,8 @@
       hudStatus.textContent = 'LISTENING';
       hudSub.textContent = 'CLAP TO ACTIVATE';
       updateThresholdMarker();
-      listenLoop();
+      // Delay before listening — mic generates noise spike on init
+      setTimeout(function () { startListening(); }, 2000);
     } catch (err) {
       hudStatus.textContent = 'MIC DENIED';
       hudSub.textContent = 'CLICK ANYWHERE TO ACTIVATE';
@@ -224,27 +225,36 @@
     levelThreshold.style.left = Math.min(config.sensitivity * 200, 100) + '%';
   }
 
-  // ---- Clap Detection (peak detection — catches transients better than RMS) ----
+  // ---- Clap Detection (setInterval — works even when tab is minimized) ----
   var listenFrame = 0;
-  function listenLoop() {
+  var listenInterval = null;
+
+  function startListening() {
+    if (listenInterval) return;
+    // setInterval at 60ms (~16fps) — rAF stops in minimized tabs, setInterval doesn't
+    listenInterval = setInterval(listenTick, 60);
+  }
+
+  function listenTick() {
     listenFrame++;
     analyser.getByteTimeDomainData(timeData);
 
     // Peak detection — finds the loudest sample in the buffer
-    // Much better than RMS for short transients like claps
     var peak = 0;
     for (var i = 0; i < timeData.length; i++) {
       var v = Math.abs((timeData[i] - 128) / 128);
       if (v > peak) peak = v;
     }
 
-    var pct = Math.min(peak * 200, 100);
-    levelFill.style.width = pct + '%';
-    levelFill.classList.toggle('hot', peak > config.sensitivity * 0.7);
-    if (listenFrame % 2 === 0) drawMicVis();
+    // Update UI only if tab is visible
+    if (!document.hidden) {
+      var pct = Math.min(peak * 200, 100);
+      levelFill.style.width = pct + '%';
+      levelFill.classList.toggle('hot', peak > config.sensitivity * 0.7);
+      if (listenFrame % 2 === 0) drawMicVis();
+    }
 
-    // Peak check — single clap should trigger
-    // After activation, use higher threshold to avoid YouTube audio triggering re-clap
+    // Peak check
     var threshold = activated ? Math.max(config.sensitivity * 3, 0.5) : config.sensitivity;
     var now = Date.now();
     if (peak > threshold && now - lastClapTime > COOLDOWN) {
@@ -252,7 +262,6 @@
       if (!activated) activate();
       else restoreWindows();
     }
-    requestAnimationFrame(listenLoop);
   }
 
   // ---- Mic Visualizer ----
